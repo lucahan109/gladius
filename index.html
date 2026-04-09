@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GLADIUS MANAGER</title>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getFirestore, collection, addDoc, deleteDoc, doc,
+    onSnapshot, updateDoc, query, orderBy
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // ============================================================
+  //  🔥 여기에 Firebase 설정값을 붙여넣으세요
+  // ============================================================
+  const firebaseConfig = {
+    apiKey:            "AIzaSyD9kQJ35TDt4PtADW2PliDdKYJ-MbbjlnY",
+    authDomain:        "gladius-36a9a.firebaseapp.com",
+    projectId:         "gladius-36a9a",
+    storageBucket:     "gladius-36a9a.firebasestorage.app",
+    messagingSenderId: "1038523359549",
+    appId:             "1:1038523359549:web:54c71e9bcae83d1105e554",
+    measurementId:     "G-5SEY3V61C8"
+  };
+  // ============================================================
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+  window._db = db;
+  window._col = collection;
+  window._addDoc = addDoc;
+  window._deleteDoc = deleteDoc;
+  window._doc = doc;
+  window._onSnapshot = onSnapshot;
+  window._updateDoc = updateDoc;
+  window._query = query;
+  window._orderBy = orderBy;
+  document.dispatchEvent(new Event("db-ready"));
+</script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Bebas+Neue&display=swap');
+:root {
+  --navy:#0d1f3c;--blue:#1a3a6b;--accent:#2e7dd1;--ice:#e8f4fd;
+  --red:#c0392b;--green:#1e7e34;--amber:#c67b00;
+  --text:#1a1a2e;--muted:#64748b;--border:#e2e8f0;--bg:#f8fafc;--white:#ffffff;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.site-header{background:var(--navy);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:50}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.logo-icon svg{width:18px;height:18px}
+.logo-text{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:#fff}
+.logo-sub{font-size:10px;color:rgba(255,255,255,0.45)}
+.conn-wrap{display:flex;align-items:center;gap:6px}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#6b7280;transition:background 0.3s}
+.status-dot.on{background:#22c55e;box-shadow:0 0 5px #22c55e88}
+#conn-label{font-size:11px;color:rgba(255,255,255,0.5)}
+.season-bar{background:var(--white);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:10px;height:46px}
+.season-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);white-space:nowrap}
+.season-select{padding:5px 10px;font-size:13px;font-family:inherit;border:1px solid var(--border);border-radius:7px;background:var(--white);color:var(--text);outline:none;cursor:pointer;max-width:200px}
+.season-select:focus{border-color:var(--accent)}
+.btn-new-season{padding:5px 12px;font-size:12px;font-weight:500;font-family:inherit;border:1px solid var(--border);border-radius:7px;background:var(--white);color:var(--muted);cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.btn-new-season:hover{background:var(--ice);color:var(--accent);border-color:var(--accent)}
+.nav-tabs{background:var(--white);border-bottom:1px solid var(--border);display:flex;padding:0 1.5rem;overflow-x:auto}
+.nav-tab{padding:12px 18px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;white-space:nowrap;font-family:inherit;display:flex;align-items:center;gap:5px}
+.nav-tab:hover{color:var(--text)}
+.nav-tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.cnt{background:var(--ice);color:var(--accent);font-size:10px;padding:1px 5px;border-radius:9px;font-weight:700}
+.main{max-width:900px;margin:0 auto;padding:1.5rem 1rem 4rem}
+.section{display:none}
+.section.active{display:block}
+.card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:1rem}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:11px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px}
+.fg input,.fg select{padding:8px 10px;font-size:13px;font-family:inherit;border:1px solid var(--border);border-radius:7px;background:var(--white);color:var(--text);outline:none;transition:border 0.15s}
+.fg input:focus,.fg select:focus{border-color:var(--accent)}
+.btn{padding:7px 14px;font-size:13px;font-weight:500;font-family:inherit;border:1px solid var(--border);border-radius:7px;cursor:pointer;background:var(--white);color:var(--text);transition:all 0.15s;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:var(--bg)}
+.btn:active{transform:scale(0.98)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:#142d54}
+.btn-danger{color:var(--red)}
+.btn-danger:hover{background:#fef2f2;border-color:#fecaca}
+.btn-sm{padding:4px 9px;font-size:12px}
+.btn-ghost{border-color:transparent}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:9px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);background:var(--bg);border-bottom:1px solid var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafbfc}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--ice);color:var(--accent);font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.b-F{background:#dbeafe;color:#1e40af}
+.b-D{background:#dcfce7;color:#166534}
+.b-G{background:#fef3c7;color:#92400e}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.5rem}
+.stat-box{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center}
+.stat-box .num{font-size:24px;font-weight:700;color:var(--blue)}
+.stat-box .lbl{font-size:11px;color:var(--muted);margin-top:2px}
+.team-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0}
+.game-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.game-vs{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.game-team{font-size:14px;font-weight:700}
+.game-score-big{font-size:22px;font-weight:700;padding:0 4px}
+.game-meta{font-size:12px;color:var(--muted);margin-top:4px}
+.game-records{font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
+.team-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;margin-bottom:10px}
+.team-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.player-assign-list{display:flex;flex-wrap:wrap;gap:6px}
+.player-tag{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;border:1px solid var(--border);background:var(--bg)}
+.player-tag .remove{cursor:pointer;color:var(--muted);font-size:14px;line-height:1}
+.player-tag .remove:hover{color:var(--red)}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--white);border-radius:16px;padding:1.5rem;width:520px;max-width:95vw;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.modal-head h3{font-size:15px;font-weight:700}
+.modal-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}
+.pill-wrap{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
+.pill{padding:5px 12px;font-size:12px;font-weight:500;border-radius:20px;border:1px solid var(--border);cursor:pointer;background:var(--white);color:var(--muted);transition:all 0.15s;font-family:inherit}
+.pill:hover{border-color:var(--accent);color:var(--accent)}
+.pill.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.sub-tabs{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
+.sub-tab{padding:5px 13px;font-size:12px;font-weight:500;border-radius:20px;border:1px solid var(--border);cursor:pointer;background:var(--white);color:var(--muted);transition:all 0.15s;font-family:inherit}
+.sub-tab.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.top-bar h2{font-size:15px;font-weight:700}
+.empty{text-align:center;padding:2.5rem;color:var(--muted);font-size:13px}
+#loading{position:fixed;inset:0;background:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;color:#fff;gap:14px}
+#loading .spin{width:34px;height:34px;border:3px solid rgba(255,255,255,0.15);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{font-size:12px;color:rgba(255,255,255,0.5)}
+#setup-screen{display:none;position:fixed;inset:0;background:var(--navy);z-index:998;align-items:center;justify-content:center}
+#setup-screen.show{display:flex}
+.setup-box{background:var(--white);border-radius:16px;padding:2rem;width:460px;max-width:95vw}
+.setup-box h2{font-size:17px;font-weight:700;margin-bottom:0.5rem}
+.setup-box p{font-size:13px;color:var(--muted);margin-bottom:1rem;line-height:1.6}
+.setup-step{display:flex;gap:10px;margin-bottom:8px;font-size:13px}
+.step-num{width:20px;height:20px;border-radius:50%;background:var(--blue);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.hint-box{font-size:12px;padding:8px 10px;border-radius:6px;border-left:3px solid var(--amber);background:#fffbeb;color:#92400e;margin-top:8px}
+.color-picker-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.color-opt{width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all 0.15s}
+.color-opt.selected{border-color:var(--text);transform:scale(1.15)}
+.rec-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.rec-item:last-child{border-bottom:none}
+.season-new-input{width:100%;padding:10px;font-size:14px;font-family:inherit;border:1px solid var(--border);border-radius:8px;outline:none}
+.season-new-input:focus{border-color:var(--accent)}
+.hide-mobile{display:table-cell}
+.show-mobile{display:none}
+.mobile-expand-btn{display:none}
+@media(max-width:600px){
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .nav-tabs{padding:0 0.75rem}
+  .main{padding:1rem 0.5rem 4rem}
+  .season-bar{padding:0 0.75rem}
+  .hide-mobile{display:none}
+  .show-mobile{display:table-cell}
+  .mobile-expand-btn{display:inline-flex}
+  .tbl-wrap{overflow-x:hidden;width:100%}
+  table{table-layout:fixed;width:100%;word-break:keep-all}
+  td,th{padding:7px 4px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #player-table{table-layout:fixed;width:100%}
+  .stats-table td,.stats-table th{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:7px 4px;font-size:11px}
+  .stats-table .name-col{max-width:70px}
+  .stats-table .team-col{max-width:60px}
+}
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spin"></div><p>Firebase 연결 중...</p></div>
+
+<div id="setup-screen">
+  <div class="setup-box">
+    <h2>🔥 Firebase 설정 필요</h2>
+    <p>index.html 파일 상단의 firebaseConfig 부분에 Firebase 프로젝트 설정값을 붙여넣어 주세요.</p>
+    <div class="setup-step"><span class="step-num">1</span><span>console.firebase.google.com → 프로젝트 선택</span></div>
+    <div class="setup-step"><span class="step-num">2</span><span>프로젝트 설정(⚙️) → 내 앱 → firebaseConfig 복사</span></div>
+    <div class="setup-step"><span class="step-num">3</span><span>index.html 상단 YOUR_API_KEY 부분에 붙여넣기 후 저장</span></div>
+    <div class="hint-box">Firestore Database → Rules 탭에서 allow read, write: if true; 로 설정되어 있어야 해요.</div>
+    <button class="btn btn-primary" style="width:100%;margin-top:1rem;justify-content:center" onclick="document.getElementById('setup-screen').classList.remove('show')">확인</button>
+  </div>
+</div>
+
+<header class="site-header">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <ellipse cx="12" cy="19" rx="9" ry="2"/>
+        <path d="M5.5 5.5C3 8 3 12 5.5 14L12 7.5 18.5 14c2.5-2 2.5-6 0-8.5"/>
+        <circle cx="12" cy="4" r="2.2" fill="#fff" stroke="none"/>
+      </svg>
+    </div>
+    <div><div class="logo-text">GLADIUS MANAGER</div><div class="logo-sub">글라디우스 리그 관리</div></div>
+  </div>
+  <div class="conn-wrap"><span class="status-dot" id="dot"></span><span id="conn-label">연결 중...</span></div>
+</header>
+
+<div class="season-bar">
+  <span class="season-label">시즌</span>
+  <select id="season-select" class="season-select" onchange="onSeasonChange()">
+    <option value="">— 시즌을 선택하세요 —</option>
+  </select>
+  <button class="btn-new-season" onclick="openSeasonModal()">+ 새 시즌</button>
+  <button class="btn-new-season" id="btn-del-season" style="display:none;color:var(--red);border-color:#fecaca" onclick="deleteSeason()">시즌 삭제</button>
+</div>
+
+<nav class="nav-tabs">
+  <button class="nav-tab active" onclick="switchTab('players')">선수 <span class="cnt" id="cnt-p">0</span></button>
+  <button class="nav-tab" onclick="switchTab('teams')">팀 관리 <span class="cnt" id="cnt-t">0</span></button>
+  <button class="nav-tab" onclick="switchTab('games')">경기 <span class="cnt" id="cnt-g">0</span></button>
+  <button class="nav-tab" onclick="switchTab('stats')">통계</button>
+</nav>
+
+<main class="main">
+
+  <!-- 선수 관리 -->
+  <section id="tab-players" class="section active">
+    <div class="card">
+      <div class="card-title">새 선수 등록</div>
+      <div class="form-row">
+        <div class="fg"><label>이름 *</label><input id="p-name" placeholder="홍길동" /></div>
+        <div class="fg"><label>등번호</label><input id="p-number" type="number" placeholder="10" /></div>
+        <div class="fg"><label>포지션</label>
+          <select id="p-pos">
+            <option value="F">포워드 (F)</option>
+            <option value="D">디펜더 (D)</option>
+            <option value="G">골키퍼 (G)</option>
+          </select>
+        </div>
+        <div class="fg"><label>역할</label>
+          <select id="p-role">
+            <option value="Player">Player</option>
+            <option value="Manager">Manager</option>
+            <option value="Coach">Coach</option>
+            <option value="Captain">Captain</option>
+            <option value="Vice Captain">Vice Captain</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="addPlayer()">+ 선수 등록</button>
+    </div>
+    <div class="top-bar">
+      <h2>전체 선수 명단</h2>
+      <input id="search-p" oninput="renderPlayers()" placeholder="이름 검색…" style="padding:6px 10px;font-size:13px;border:1px solid var(--border);border-radius:7px;width:150px;font-family:inherit;outline:none" />
+    </div>
+    <div class="card" style="padding:0">
+      <div class="tbl-wrap">
+        <table id="player-table">
+          <colgroup>
+            <col style="width:35%">
+            <col style="width:18%">
+            <col style="width:14%">
+            <col style="width:18%">
+            <col class="hide-mobile">
+            <col class="hide-mobile">
+            <col class="hide-mobile">
+            <col class="hide-mobile">
+            <col class="hide-mobile">
+            <col class="hide-mobile">
+            <col class="hide-mobile" style="width:120px">
+            <col class="show-mobile" style="width:15%">
+          </colgroup>
+          <thead><tr>
+            <th>선수</th>
+            <th>역할</th>
+            <th>번호</th>
+            <th>포지션</th>
+            <th class="hide-mobile">소속팀</th>
+            <th class="hide-mobile">G</th>
+            <th class="hide-mobile">PK</th>
+            <th class="hide-mobile">A</th>
+            <th class="hide-mobile">P</th>
+            <th class="hide-mobile">반칙</th>
+            <th class="hide-mobile"></th>
+            <th class="show-mobile"></th>
+          </tr></thead>
+          <tbody id="player-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- 팀 관리 -->
+  <section id="tab-teams" class="section">
+    <div id="teams-no-season" class="empty" style="display:none">시즌을 먼저 선택하거나 생성해주세요</div>
+    <div id="teams-content">
+      <div class="card">
+        <div class="card-title">새 팀 등록</div>
+        <div class="form-row">
+          <div class="fg"><label>팀 이름 *</label><input id="t-name" placeholder="레드 드래곤" /></div>
+        </div>
+        <div class="fg" style="margin-bottom:12px">
+          <label>팀 색상</label>
+          <div class="color-picker-row" id="color-picker">
+            <div class="color-opt selected" data-color="#e74c3c" style="background:#e74c3c" onclick="selectColor(this)"></div>
+            <div class="color-opt" data-color="#3498db" style="background:#3498db" onclick="selectColor(this)"></div>
+            <div class="color-opt" data-color="#2ecc71" style="background:#2ecc71" onclick="selectColor(this)"></div>
+            <div class="color-opt" data-color="#f39c12" style="background:#f39c12" onclick="selectColor(this)"></div>
+            <div class="color-opt" data-color="#9b59b6" style="background:#9b59b6" onclick="selectColor(this)"></div>
+            <div class="color-opt" data-color="#1abc9c" style="background:#1abc9c" onclick="selectColor(this)"></div>
+            <div class="color-opt" data-color="#e67e22" style="background:#e67e22" onclick="selectColor(this)"></div>
+            <div class="color-opt" data-color="#34495e" style="background:#34495e" onclick="selectColor(this)"></div>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addTeam()">+ 팀 등록</button>
+      </div>
+      <div id="team-list"></div>
+    </div>
+  </section>
+
+  <!-- 경기 관리 -->
+  <section id="tab-games" class="section">
+    <div id="games-no-season" class="empty" style="display:none">시즌을 먼저 선택하거나 생성해주세요</div>
+    <div id="games-content">
+      <div class="card">
+        <div class="card-title">새 경기 등록</div>
+        <div class="form-row">
+          <div class="fg"><label>날짜 *</label><input id="g-date" type="date" /></div>
+          <div class="fg"><label>장소</label><input id="g-venue" placeholder="목동 아이스링크" /></div>
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+          <div class="fg" style="flex:1;min-width:120px">
+            <label>팀 A *</label>
+            <select id="g-teamA" style="padding:8px 10px;font-size:13px;font-family:inherit;border:1px solid var(--border);border-radius:7px;background:var(--white);color:var(--text);outline:none">
+              <option value="">팀 선택</option>
+            </select>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding-bottom:2px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <input id="g-scoreA" type="number" min="0" value="0" style="width:60px;height:44px;text-align:center;font-size:20px;font-weight:700;border:1px solid var(--border);border-radius:7px;font-family:inherit;outline:none" />
+              <span style="font-size:18px;color:var(--muted)">:</span>
+              <input id="g-scoreB" type="number" min="0" value="0" style="width:60px;height:44px;text-align:center;font-size:20px;font-weight:700;border:1px solid var(--border);border-radius:7px;font-family:inherit;outline:none" />
+            </div>
+          </div>
+          <div class="fg" style="flex:1;min-width:120px">
+            <label>팀 B *</label>
+            <select id="g-teamB" style="padding:8px 10px;font-size:13px;font-family:inherit;border:1px solid var(--border);border-radius:7px;background:var(--white);color:var(--text);outline:none">
+              <option value="">팀 선택</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addGame()">+ 경기 등록</button>
+      </div>
+      <h2 style="font-size:15px;font-weight:700;margin-bottom:1rem">경기 목록</h2>
+      <div id="game-list"></div>
+    </div>
+  </section>
+
+  <!-- 통계 -->
+  <section id="tab-stats" class="section">
+    <div id="stats-no-season" class="empty" style="display:none">시즌을 먼저 선택하거나 생성해주세요</div>
+    <div id="stats-content">
+      <div class="stat-grid">
+        <div class="stat-box"><div class="num" id="st-p">0</div><div class="lbl">총 선수</div></div>
+        <div class="stat-box"><div class="num" id="st-g">0</div><div class="lbl">총 경기</div></div>
+        <div class="stat-box"><div class="num" id="st-t">0</div><div class="lbl">팀 수</div></div>
+        <div class="stat-box"><div class="num" id="st-goals">0</div><div class="lbl">총 득점</div></div>
+      </div>
+      <div class="sub-tabs">
+        <button class="sub-tab on" onclick="switchSub('standings')">팀 순위</button>
+        <button class="sub-tab" onclick="switchSub('scorers')">득점 순위</button>
+        <button class="sub-tab" onclick="switchSub('assists')">어시스트</button>
+        <button class="sub-tab" onclick="switchSub('pim')">반칙</button>
+        <button class="sub-tab" onclick="switchSub('log')">경기 기록</button>
+      </div>
+      <div class="card" style="padding:0">
+        <div class="tbl-wrap" id="sub-standings"></div>
+        <div class="tbl-wrap" id="sub-scorers" style="display:none"></div>
+        <div class="tbl-wrap" id="sub-assists" style="display:none"></div>
+        <div class="tbl-wrap" id="sub-pim"     style="display:none"></div>
+        <div class="tbl-wrap" id="sub-log"     style="display:none"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- 선수 수정 모달 -->
+<div class="modal-bg" id="edit-player-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head"><h3>선수 정보 수정</h3><button class="btn btn-sm btn-ghost" onclick="closeEditPlayerModal()">✕</button></div>
+    <div class="form-row">
+      <div class="fg"><label>이름 *</label><input id="ep-name" placeholder="홍길동" /></div>
+      <div class="fg"><label>등번호</label><input id="ep-number" type="number" placeholder="10" /></div>
+      <div class="fg"><label>포지션</label>
+        <select id="ep-pos">
+          <option value="F">포워드 (F)</option>
+          <option value="D">디펜더 (D)</option>
+          <option value="G">골키퍼 (G)</option>
+        </select>
+      </div>
+      <div class="fg"><label>역할</label>
+        <select id="ep-role">
+          <option value="Player">Player</option>
+          <option value="Manager">Manager</option>
+          <option value="Coach">Coach</option>
+          <option value="Captain">Captain</option>
+          <option value="Vice Captain">Vice Captain</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeEditPlayerModal()">취소</button>
+      <button class="btn btn-primary" onclick="saveEditPlayer()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 시즌 생성 모달 -->
+<div class="modal-bg" id="season-modal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-head"><h3>새 시즌 만들기</h3><button class="btn btn-sm btn-ghost" onclick="closeSeasonModal()">✕</button></div>
+    <div class="fg">
+      <label>시즌 이름 *</label>
+      <input id="season-name-input" class="season-new-input" placeholder="예: 2025 봄 리그" />
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeSeasonModal()">취소</button>
+      <button class="btn btn-primary" onclick="createSeason()">만들기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 선수 배정 모달 -->
+<div class="modal-bg" id="assign-modal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="assign-title">선수 배정</h3><button class="btn btn-sm btn-ghost" onclick="closeAssignModal()">✕</button></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">팀에 배정할 선수를 선택하세요</div>
+    <div id="assign-pills" class="pill-wrap"></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeAssignModal()">닫기</button>
+      <button class="btn btn-primary" onclick="saveAssign()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 기록 입력 모달 -->
+<div class="modal-bg" id="record-modal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="rec-title">기록 입력</h3><button class="btn btn-sm btn-ghost" onclick="closeRecModal()">✕</button></div>
+    <div id="rec-meta" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);margin-bottom:6px">선수 선택</div>
+    <div id="rec-pills" class="pill-wrap"></div>
+    <div id="rec-sel" style="font-size:13px;font-weight:500;min-height:18px;margin-bottom:10px"></div>
+    <div class="form-row">
+      <div class="fg"><label>일반 골</label><input id="rec-g" type="number" min="0" value="0" /></div>
+      <div class="fg"><label>PK 골</label><input id="rec-pkg" type="number" min="0" value="0" /></div>
+      <div class="fg"><label>어시스트 (A)</label><input id="rec-a" type="number" min="0" value="0" /></div>
+      <div class="fg"><label>반칙</label><input id="rec-pim" type="number" min="0" value="0" /></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeRecModal()">닫기</button>
+      <button class="btn btn-primary" onclick="saveRecord()">기록 저장</button>
+    </div>
+    <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);margin-bottom:8px">이 경기 기록 현황</div>
+      <div id="rec-list"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let players=[],seasons=[],teams=[],games=[];
+let curSeasonId=null,selPlayerId=null,curGameId=null,assignTeamId=null,selColor='#e74c3c';
+let unsubs=[];
+const POS={F:'포워드',D:'디펜더',G:'골키퍼'};
+
+document.addEventListener('db-ready',()=>{
+  const db=window._db;
+  if(db.app.options.apiKey==='YOUR_API_KEY'){
+    document.getElementById('loading').style.display='none';
+    document.getElementById('setup-screen').classList.add('show');
+    return;
+  }
+  window._onSnapshot(window._query(window._col(db,'players'),window._orderBy('createdAt','asc')),snap=>{
+    players=snap.docs.map(d=>({id:d.id,...d.data()}));
+    document.getElementById('cnt-p').textContent=players.length;
+    renderPlayers();renderStats();
+  });
+  window._onSnapshot(window._query(window._col(db,'seasons'),window._orderBy('createdAt','asc')),snap=>{
+    seasons=snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderSeasonSelect();
+  });
+  document.getElementById('loading').style.display='none';
+  document.getElementById('dot').classList.add('on');
+  document.getElementById('conn-label').textContent='실시간 연결됨';
+});
+
+function renderSeasonSelect(){
+  const sel=document.getElementById('season-select');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— 시즌을 선택하세요 —</option>';
+  seasons.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.name;sel.appendChild(o);});
+  if(prev&&seasons.find(s=>s.id===prev))sel.value=prev;
+  else if(seasons.length)sel.value=seasons[seasons.length-1].id;
+  onSeasonChange();
+}
+
+function onSeasonChange(){
+  const val=document.getElementById('season-select').value;
+  curSeasonId=val||null;
+  document.getElementById('btn-del-season').style.display=curSeasonId?'':'none';
+  unsubs.forEach(u=>u());unsubs=[];
+  if(!curSeasonId){teams=[];games=[];updateGates();renderTeams();renderGameList();renderStats();return;}
+  const db=window._db;
+  unsubs.push(window._onSnapshot(window._query(window._col(db,`seasons/${curSeasonId}/teams`),window._orderBy('createdAt','asc')),snap=>{
+    teams=snap.docs.map(d=>({id:d.id,...d.data()}));
+    document.getElementById('cnt-t').textContent=teams.length;
+    renderTeams();renderStats();populateTeamSelects();renderPlayers();
+  }));
+  unsubs.push(window._onSnapshot(window._query(window._col(db,`seasons/${curSeasonId}/games`),window._orderBy('date','desc')),snap=>{
+    games=snap.docs.map(d=>({id:d.id,...d.data()}));
+    document.getElementById('cnt-g').textContent=games.length;
+    renderGameList();renderStats();renderPlayers();
+    if(curGameId)renderRecList();
+  }));
+  updateGates();
+}
+
+function updateGates(){
+  const has=!!curSeasonId;
+  ['teams','games','stats'].forEach(n=>{
+    const ns=document.getElementById(`${n}-no-season`);
+    const c=document.getElementById(`${n}-content`);
+    if(ns)ns.style.display=has?'none':'';
+    if(c)c.style.display=has?'':'none';
+  });
+}
+
+function openSeasonModal(){document.getElementById('season-name-input').value='';document.getElementById('season-modal').classList.add('open');setTimeout(()=>document.getElementById('season-name-input').focus(),100);}
+function closeSeasonModal(){document.getElementById('season-modal').classList.remove('open');}
+
+async function createSeason(){
+  const name=document.getElementById('season-name-input').value.trim();
+  if(!name){alert('시즌 이름을 입력해주세요');return;}
+  const ref=await window._addDoc(window._col(window._db,'seasons'),{name,createdAt:Date.now()});
+  closeSeasonModal();
+  setTimeout(()=>{document.getElementById('season-select').value=ref.id;onSeasonChange();},500);
+}
+
+async function deleteSeason(){
+  if(!curSeasonId)return;
+  const s=seasons.find(x=>x.id===curSeasonId);
+  if(!confirm(`"${s?.name}" 시즌을 삭제하시겠습니까?\n팀과 경기 데이터도 모두 삭제됩니다.`))return;
+  await window._deleteDoc(window._doc(window._db,'seasons',curSeasonId));
+  curSeasonId=null;
+}
+
+async function addPlayer(){
+  const name=document.getElementById('p-name').value.trim();
+  if(!name){alert('이름을 입력해주세요');return;}
+  await window._addDoc(window._col(window._db,'players'),{
+    name,
+    number:document.getElementById('p-number').value||'-',
+    pos:document.getElementById('p-pos').value,
+    role:document.getElementById('p-role').value||'Player',
+    createdAt:Date.now()
+  });
+  document.getElementById('p-name').value='';document.getElementById('p-number').value='';
+}
+
+async function removePlayer(id){
+  if(!confirm('선수를 삭제하시겠습니까?'))return;
+  await window._deleteDoc(window._doc(window._db,'players',id));
+}
+
+let editPlayerId=null;
+function openEditPlayerModal(id){
+  editPlayerId=id;
+  const p=players.find(x=>x.id===id);
+  if(!p)return;
+  document.getElementById('ep-name').value=p.name;
+  document.getElementById('ep-number').value=p.number==='-'?'':p.number;
+  document.getElementById('ep-pos').value=p.pos;
+  document.getElementById('ep-role').value=p.role||'Player';
+  document.getElementById('edit-player-modal').classList.add('open');
+}
+function closeEditPlayerModal(){document.getElementById('edit-player-modal').classList.remove('open');editPlayerId=null;}
+async function saveEditPlayer(){
+  const name=document.getElementById('ep-name').value.trim();
+  if(!name){alert('이름을 입력해주세요');return;}
+  await window._updateDoc(window._doc(window._db,'players',editPlayerId),{
+    name,
+    number:document.getElementById('ep-number').value||'-',
+    pos:document.getElementById('ep-pos').value,
+    role:document.getElementById('ep-role').value||'Player'
+  });
+  closeEditPlayerModal();
+}
+
+function getPlayerStats(pid){
+  let g=0,pkg=0,a=0,pim=0;
+  games.forEach(gm=>(gm.records||[]).filter(r=>r.playerId===pid).forEach(r=>{g+=r.goals;pkg+=(r.pkgoals||0);a+=r.assists;pim+=r.pim;}));
+  return{g,pkg,a,pim,total:g+pkg};
+}
+
+function getPlayerTeam(pid){return teams.find(t=>(t.players||[]).includes(pid))||null;}
+
+const ROLE_ORDER={Manager:0,Coach:1,Captain:2,'Vice Captain':3,Player:4};
+const ROLE_BADGE={
+  Manager:'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#fef3c7;color:#92400e">Manager</span>',
+  Coach:'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#dbeafe;color:#1e40af">Coach</span>',
+  Captain:'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#fce7f3;color:#9d174d">Captain</span>',
+  'Vice Captain':'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#ede9fe;color:#5b21b6">V.Captain</span>',
+  Player:''
+};
+
+let expandedPlayerId=null;
+
+function togglePlayerExpand(pid){
+  expandedPlayerId=expandedPlayerId===pid?null:pid;
+  renderPlayers();
+}
+
+function getPlayerGameLog(pid){
+  return games.filter(g=>(g.records||[]).some(r=>r.playerId===pid)).map(g=>{
+    const r=g.records.find(x=>x.playerId===pid);
+    const tA=teams.find(t=>t.id===g.teamAId),tB=teams.find(t=>t.id===g.teamBId);
+    const myTeam=(tA?.players||[]).includes(pid)?tA:tB;
+    const oppTeam=myTeam?.id===g.teamAId?tB:tA;
+    const gStr=r.pkgoals?`${r.goals}G+${r.pkgoals}PK`:`${r.goals}G`;
+    return{date:g.date,myTeam,oppTeam,scoreA:g.scoreA,scoreB:g.scoreB,teamAId:g.teamAId,gStr,assists:r.assists,pim:r.pim};
+  }).sort((a,b)=>b.date.localeCompare(a.date));
+}
+
+function renderPlayers(){
+  const q=document.getElementById('search-p')?.value.toLowerCase()||'';
+  const list=players.filter(p=>p.name.toLowerCase().includes(q));
+  const tb=document.getElementById('player-tbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="11" class="empty">등록된 선수가 없습니다</td></tr>';return;}
+
+  // Sort: role order first, then by number for Players
+  const sorted=[...list].sort((a,b)=>{
+    const ra=ROLE_ORDER[a.role||'Player']??4;
+    const rb=ROLE_ORDER[b.role||'Player']??4;
+    if(ra!==rb)return ra-rb;
+    const na=parseInt(a.number)||999,nb=parseInt(b.number)||999;
+    return na-nb;
+  });
+
+  tb.innerHTML=sorted.map(p=>{
+    const s=getPlayerStats(p.id);
+    const t=getPlayerTeam(p.id);
+    const role=p.role||'Player';
+    const isExpanded=expandedPlayerId===p.id;
+    const log=isExpanded?getPlayerGameLog(p.id):[];
+
+    const mainRow=`<tr>
+      <td style="cursor:pointer" onclick="togglePlayerExpand('${p.id}')"><div style="display:flex;align-items:center;gap:6px;min-width:0">
+        <span class="avatar" style="flex-shrink:0">${p.name.slice(0,2)}</span>
+        <span style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>
+        <span style="font-size:10px;color:var(--muted);flex-shrink:0;transition:transform 0.2s;display:inline-block;transform:rotate(${isExpanded?'90':'0'}deg)">▶</span>
+      </div></td>
+      <td style="white-space:nowrap;cursor:pointer" onclick="togglePlayerExpand('${p.id}')">${ROLE_BADGE[role]||'<span style="font-size:11px;color:var(--muted)">-</span>'}</td>
+      <td style="white-space:nowrap;font-size:12px;cursor:pointer" onclick="togglePlayerExpand('${p.id}')">#${p.number}</td>
+      <td style="white-space:nowrap;cursor:pointer" onclick="togglePlayerExpand('${p.id}')"><span class="badge b-${p.pos}" style="font-size:10px;padding:2px 5px">${POS[p.pos]}</span></td>
+      <td class="hide-mobile">${t?`<span style="display:inline-flex;align-items:center;gap:5px"><span class="team-dot" style="background:${t.color}"></span>${t.name}</span>`:'<span style="color:var(--muted)">미배정</span>'}</td>
+      <td class="hide-mobile" style="font-weight:600">${s.g}</td>
+      <td class="hide-mobile" style="font-weight:600;color:var(--accent)">${s.pkg||0}</td>
+      <td class="hide-mobile" style="font-weight:600">${s.a}</td>
+      <td class="hide-mobile" style="font-weight:600;color:var(--accent)">${s.total+s.a}</td>
+      <td class="hide-mobile">${s.pim}</td>
+      <td class="hide-mobile"><div style="display:flex;gap:5px;justify-content:flex-end"><button class="btn btn-sm" onclick="openEditPlayerModal('${p.id}')">수정</button><button class="btn btn-sm btn-danger" onclick="removePlayer('${p.id}')">삭제</button></div></td>
+      <td class="show-mobile"><div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end"><button class="btn btn-sm" style="font-size:11px;padding:3px 7px;white-space:nowrap" onclick="openEditPlayerModal('${p.id}')">수정</button><button class="btn btn-sm btn-danger" style="font-size:11px;padding:3px 7px;white-space:nowrap" onclick="removePlayer('${p.id}')">삭제</button></div></td>
+    </tr>`;
+
+    const statsBlock=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:var(--blue)">${s.g}</div>
+        <div style="font-size:10px;color:var(--muted)">일반 골</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:var(--accent)">${s.pkg||0}</div>
+        <div style="font-size:10px;color:var(--muted)">PK 골</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:var(--blue)">${s.a}</div>
+        <div style="font-size:10px;color:var(--muted)">어시스트</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:var(--accent)">${s.total+s.a}</div>
+        <div style="font-size:10px;color:var(--muted)">총 포인트</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:18px;font-weight:700">${s.pim}</div>
+        <div style="font-size:10px;color:var(--muted)">반칙</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:13px;font-weight:600">${t?t.name:'미배정'}</div>
+        <div style="font-size:10px;color:var(--muted)">소속팀</div>
+      </div>
+    </div>`;
+
+    const detailRow=isExpanded?`<tr>
+      <td colspan="11" style="padding:0;background:var(--bg)">
+        <div style="padding:12px 16px">
+          ${statsBlock}
+          ${log.length===0
+            ?`<div style="font-size:12px;color:var(--muted);padding:4px 0">이 시즌에 기록된 경기가 없습니다</div>`
+            :`<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px">경기별 기록</div>
+            <table style="width:100%;font-size:11px;table-layout:fixed">
+              <colgroup><col style="width:22%"><col style="width:42%"><col style="width:12%"><col style="width:12%"><col style="width:12%"></colgroup>
+              <thead><tr>
+                <th style="background:var(--bg);padding:5px 4px;white-space:nowrap">날짜</th>
+                <th style="background:var(--bg);padding:5px 4px;white-space:nowrap">경기</th>
+                <th style="background:var(--bg);padding:5px 4px;text-align:right;white-space:nowrap">골</th>
+                <th style="background:var(--bg);padding:5px 4px;text-align:right;white-space:nowrap">A</th>
+                <th style="background:var(--bg);padding:5px 4px;text-align:right;white-space:nowrap">반칙</th>
+              </tr></thead>
+              <tbody>
+                ${log.map(l=>`<tr>
+                  <td style="padding:5px 4px;color:var(--muted);white-space:nowrap;font-size:10px">${l.date}</td>
+                  <td style="padding:5px 4px;overflow:hidden"><div style="display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden">
+                    ${l.myTeam?`<span class="team-dot" style="background:${l.myTeam.color};flex-shrink:0"></span><span style="font-weight:500;font-size:10px;overflow:hidden;text-overflow:ellipsis">${l.myTeam.name}</span>`:''}
+                    <span style="color:var(--muted);font-size:10px;flex-shrink:0">vs</span>
+                    ${l.oppTeam?`<span class="team-dot" style="background:${l.oppTeam.color};flex-shrink:0"></span><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis">${l.oppTeam.name}</span>`:''}
+                    <span style="font-weight:700;font-size:10px;flex-shrink:0;margin-left:2px">${l.scoreA}:${l.scoreB}</span>
+                  </div></td>
+                  <td style="padding:5px 4px;text-align:right;font-weight:600;white-space:nowrap">${l.gStr}</td>
+                  <td style="padding:5px 4px;text-align:right;font-weight:600;white-space:nowrap">${l.assists}</td>
+                  <td style="padding:5px 4px;text-align:right;white-space:nowrap">${l.pim}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>`}
+        </div>
+      </td>
+    </tr>`:'';
+
+    return mainRow+detailRow;
+  }).join('');
+}
+
+function selectColor(el){document.querySelectorAll('.color-opt').forEach(e=>e.classList.remove('selected'));el.classList.add('selected');selColor=el.dataset.color;}
+
+async function addTeam(){
+  if(!curSeasonId){alert('시즌을 먼저 선택해주세요');return;}
+  const name=document.getElementById('t-name').value.trim();
+  if(!name){alert('팀 이름을 입력해주세요');return;}
+  await window._addDoc(window._col(window._db,`seasons/${curSeasonId}/teams`),{name,color:selColor,players:[],createdAt:Date.now()});
+  document.getElementById('t-name').value='';
+}
+
+async function removeTeam(id){
+  if(!confirm('팀을 삭제하시겠습니까?'))return;
+  await window._deleteDoc(window._doc(window._db,`seasons/${curSeasonId}/teams`,id));
+}
+
+function renderTeams(){
+  const el=document.getElementById('team-list');if(!el)return;
+  if(!teams.length){el.innerHTML='<div class="empty">등록된 팀이 없습니다</div>';return;}
+  el.innerHTML=teams.map(t=>{
+    const assigned=(t.players||[]).map(pid=>players.find(p=>p.id===pid)).filter(Boolean)
+      .sort((a,b)=>(parseInt(a.number)||999)-(parseInt(b.number)||999));
+    return`<div class="team-card">
+      <div class="team-header">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="team-dot" style="background:${t.color};width:14px;height:14px"></span>
+          <span style="font-weight:700;font-size:15px">${t.name}</span>
+          <span style="font-size:12px;color:var(--muted)">${assigned.length}명</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" onclick="openAssignModal('${t.id}')">선수 배정</button>
+          <button class="btn btn-sm btn-danger" onclick="removeTeam('${t.id}')">삭제</button>
+        </div>
+      </div>
+      <div class="player-assign-list">
+        ${assigned.length?assigned.map(p=>`<span class="player-tag"><span class="avatar" style="width:20px;height:20px;font-size:9px">${p.name.slice(0,2)}</span>#${p.number} ${p.name}<span class="remove" onclick="removeFromTeam('${t.id}','${p.id}')">×</span></span>`).join(''):'<span style="font-size:12px;color:var(--muted)">배정된 선수 없음 — 선수 배정 버튼을 눌러주세요</span>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAssignModal(teamId){
+  assignTeamId=teamId;
+  const t=teams.find(x=>x.id===teamId);
+  document.getElementById('assign-title').textContent=`선수 배정 — ${t?.name}`;
+  renderAssignPills();
+  document.getElementById('assign-modal').classList.add('open');
+}
+function closeAssignModal(){document.getElementById('assign-modal').classList.remove('open');assignTeamId=null;}
+
+function renderAssignPills(){
+  const t=teams.find(x=>x.id===assignTeamId);
+  const assigned=t?.players||[];
+  document.getElementById('assign-pills').innerHTML=players.map(p=>`<button class="pill ${assigned.includes(p.id)?'on':''}" onclick="toggleAssign('${p.id}')">#${p.number} ${p.name}</button>`).join('')||'<span style="font-size:13px;color:var(--muted)">등록된 선수가 없습니다</span>';
+}
+
+function toggleAssign(pid){
+  const t=teams.find(x=>x.id===assignTeamId);if(!t)return;
+  const list=[...(t.players||[])];
+  const idx=list.indexOf(pid);if(idx>=0)list.splice(idx,1);else list.push(pid);
+  t.players=list;renderAssignPills();
+}
+
+async function saveAssign(){
+  const t=teams.find(x=>x.id===assignTeamId);if(!t)return;
+  await window._updateDoc(window._doc(window._db,`seasons/${curSeasonId}/teams`,assignTeamId),{players:t.players||[]});
+  closeAssignModal();
+}
+
+async function removeFromTeam(teamId,pid){
+  const t=teams.find(x=>x.id===teamId);if(!t)return;
+  await window._updateDoc(window._doc(window._db,`seasons/${curSeasonId}/teams`,teamId),{players:(t.players||[]).filter(x=>x!==pid)});
+}
+
+function populateTeamSelects(){
+  ['g-teamA','g-teamB'].forEach(id=>{
+    const sel=document.getElementById(id);if(!sel)return;
+    const prev=sel.value;
+    sel.innerHTML='<option value="">팀 선택</option>';
+    teams.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.name;sel.appendChild(o);});
+    if(prev)sel.value=prev;
+  });
+}
+
+async function addGame(){
+  if(!curSeasonId){alert('시즌을 먼저 선택해주세요');return;}
+  const date=document.getElementById('g-date').value;
+  const teamAId=document.getElementById('g-teamA').value;
+  const teamBId=document.getElementById('g-teamB').value;
+  if(!date||!teamAId||!teamBId){alert('날짜와 두 팀을 모두 선택해주세요');return;}
+  if(teamAId===teamBId){alert('같은 팀끼리는 경기할 수 없어요');return;}
+  const sA=parseInt(document.getElementById('g-scoreA').value)||0;
+  const sB=parseInt(document.getElementById('g-scoreB').value)||0;
+  const venue=document.getElementById('g-venue').value.trim();
+  const tA=teams.find(t=>t.id===teamAId),tB=teams.find(t=>t.id===teamBId);
+  await window._addDoc(window._col(window._db,`seasons/${curSeasonId}/games`),{
+    date,venue:venue||'-',
+    teamAId,teamAName:tA?.name||'',teamAColor:tA?.color||'#999',
+    teamBId,teamBName:tB?.name||'',teamBColor:tB?.color||'#999',
+    scoreA:sA,scoreB:sB,records:[],createdAt:Date.now()
+  });
+  document.getElementById('g-scoreA').value=0;document.getElementById('g-scoreB').value=0;
+  document.getElementById('g-date').value='';document.getElementById('g-venue').value='';
+}
+
+async function removeGame(id){
+  if(!confirm('경기를 삭제하시겠습니까?'))return;
+  await window._deleteDoc(window._doc(window._db,`seasons/${curSeasonId}/games`,id));
+}
+
+function renderGameList(){
+  const el=document.getElementById('game-list');if(!el)return;
+  if(!games.length){el.innerHTML='<div class="empty">등록된 경기가 없습니다</div>';return;}
+  el.innerHTML=games.map(g=>{
+    const w=g.scoreA>g.scoreB?'A':g.scoreA<g.scoreB?'B':'TIE';
+    const tA=teams.find(t=>t.id===g.teamAId);
+    const tB=teams.find(t=>t.id===g.teamBId);
+    const pidsA=tA?.players||[];
+    const pidsB=tB?.players||[];
+    const recsA=(g.records||[]).filter(r=>pidsA.includes(r.playerId));
+    const recsB=(g.records||[]).filter(r=>pidsB.includes(r.playerId));
+    const recOther=(g.records||[]).filter(r=>!pidsA.includes(r.playerId)&&!pidsB.includes(r.playerId));
+    const recRow=r=>{const p=players.find(x=>x.id===r.playerId);return p?`<span style="margin-right:10px">${p.name}: ${r.goals}G ${r.assists}A${r.pim?' '+r.pim+'반칙':''}`:''};
+    const teamBlock=(color,name,recs)=>recs.length?`
+      <div style="margin-bottom:6px">
+        <div style="display:inline-flex;align-items:center;gap:5px;margin-bottom:3px">
+          <span class="team-dot" style="background:${color}"></span>
+          <span style="font-size:11px;font-weight:700;color:var(--muted)">${name}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text);display:flex;flex-wrap:wrap;gap:4px">
+          ${recs.map(r=>{const p=players.find(x=>x.id===r.playerId);const gStr=r.pkgoals?`${r.goals}G+${r.pkgoals}PK`:`${r.goals}G`;return p?`<span style="background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:2px 8px">${p.name} ${gStr} ${r.assists}A${r.pim?' '+r.pim+'반칙':''}</span>`:''}).filter(Boolean).join('')}
+        </div>
+      </div>`:'';
+    const hasRecords=(g.records||[]).length>0;
+    const recordsHtml=hasRecords
+      ?teamBlock(g.teamAColor,g.teamAName,recsA)+teamBlock(g.teamBColor,g.teamBName,recsB)+(recOther.length?`<div style="font-size:12px;color:var(--muted)">${recOther.map(recRow).filter(Boolean).join(' · ')}</div>`:'')
+      :'<span style="color:var(--muted)">개인 기록 없음</span>';
+    return`<div class="game-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px">
+        <div class="game-vs">
+          <span class="team-dot" style="background:${g.teamAColor}"></span>
+          <span class="game-team" style="${w==='A'?'color:var(--green)':w==='TIE'?'':'color:var(--muted)'}">${g.teamAName}</span>
+          <span class="game-score-big">${g.scoreA}</span>
+          <span style="font-size:16px;color:var(--muted)">:</span>
+          <span class="game-score-big">${g.scoreB}</span>
+          <span class="game-team" style="${w==='B'?'color:var(--green)':w==='TIE'?'':'color:var(--muted)'}">${g.teamBName}</span>
+          <span class="team-dot" style="background:${g.teamBColor}"></span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" onclick="openRecModal('${g.id}')">기록 입력</button>
+          <button class="btn btn-sm btn-danger" onclick="removeGame('${g.id}')">삭제</button>
+        </div>
+      </div>
+      <div class="game-meta">${g.date} · ${g.venue}</div>
+      <div class="game-records">${recordsHtml}</div>
+    </div>`;
+  }).join('');
+}
+
+function openRecModal(gid){
+  curGameId=gid;selPlayerId=null;
+  const g=games.find(x=>x.id===gid);
+  document.getElementById('rec-title').textContent=`기록 입력 — ${g.teamAName} vs ${g.teamBName}`;
+  document.getElementById('rec-meta').textContent=`${g.date} · ${g.venue} · ${g.scoreA}:${g.scoreB}`;
+  document.getElementById('rec-sel').textContent='';
+  document.getElementById('rec-g').value=0;document.getElementById('rec-pkg').value=0;document.getElementById('rec-a').value=0;document.getElementById('rec-pim').value=0;
+  renderRecPills();renderRecList();
+  document.getElementById('record-modal').classList.add('open');
+}
+function closeRecModal(){document.getElementById('record-modal').classList.remove('open');curGameId=null;selPlayerId=null;}
+
+function renderRecPills(){
+  const g=games.find(x=>x.id===curGameId);if(!g)return;
+  const tA=teams.find(t=>t.id===g.teamAId),tB=teams.find(t=>t.id===g.teamBId);
+  const pA=(tA?.players||[]);const pB=(tB?.players||[]);
+  if(!pA.length&&!pB.length){document.getElementById('rec-pills').innerHTML='<span style="font-size:13px;color:var(--muted)">두 팀에 배정된 선수가 없습니다</span>';return;}
+  let html='';
+  if(pA.length){html+=`<div style="width:100%;font-size:11px;font-weight:700;color:var(--muted);margin:4px 0;display:flex;align-items:center;gap:5px"><span class="team-dot" style="background:${tA?.color}"></span>${tA?.name}</div>`;html+=pA.map(pid=>{const p=players.find(x=>x.id===pid);return p?`<button class="pill ${selPlayerId===p.id?'on':''}" onclick="selRecPlayer('${p.id}')">#${p.number} ${p.name}</button>`:''}).join('');}
+  if(pB.length){html+=`<div style="width:100%;font-size:11px;font-weight:700;color:var(--muted);margin:8px 0 4px;display:flex;align-items:center;gap:5px"><span class="team-dot" style="background:${tB?.color}"></span>${tB?.name}</div>`;html+=pB.map(pid=>{const p=players.find(x=>x.id===pid);return p?`<button class="pill ${selPlayerId===p.id?'on':''}" onclick="selRecPlayer('${p.id}')">#${p.number} ${p.name}</button>`:''}).join('');}
+  document.getElementById('rec-pills').innerHTML=html;
+}
+
+function selRecPlayer(pid){
+  selPlayerId=pid;
+  const p=players.find(x=>x.id===pid);
+  const g=games.find(x=>x.id===curGameId);
+  const ex=(g?.records||[]).find(r=>r.playerId===pid);
+  document.getElementById('rec-sel').textContent=p?`선택: ${p.name} (${POS[p.pos]})`:'';
+  document.getElementById('rec-g').value=ex?ex.goals:0;
+  document.getElementById('rec-pkg').value=ex?ex.pkgoals:0;
+  document.getElementById('rec-a').value=ex?ex.assists:0;
+  document.getElementById('rec-pim').value=ex?ex.pim:0;
+  renderRecPills();
+}
+
+async function saveRecord(){
+  if(!selPlayerId){alert('선수를 선택해주세요');return;}
+  const g=games.find(x=>x.id===curGameId);
+  const goals=parseInt(document.getElementById('rec-g').value)||0;
+  const pkgoals=parseInt(document.getElementById('rec-pkg').value)||0;
+  const assists=parseInt(document.getElementById('rec-a').value)||0;
+  const pim=parseInt(document.getElementById('rec-pim').value)||0;
+  const recs=[...(g?.records||[])];
+  const idx=recs.findIndex(r=>r.playerId===selPlayerId);
+  if(idx>=0)recs[idx]={playerId:selPlayerId,goals,pkgoals,assists,pim};else recs.push({playerId:selPlayerId,goals,pkgoals,assists,pim});
+  await window._updateDoc(window._doc(window._db,`seasons/${curSeasonId}/games`,curGameId),{records:recs});
+}
+
+async function deleteRecord(pid){
+  const g=games.find(x=>x.id===curGameId);
+  await window._updateDoc(window._doc(window._db,`seasons/${curSeasonId}/games`,curGameId),{records:(g?.records||[]).filter(r=>r.playerId!==pid)});
+  if(selPlayerId===pid)selPlayerId=null;
+}
+
+function renderRecList(){
+  const g=games.find(x=>x.id===curGameId);
+  const el=document.getElementById('rec-list');if(!el)return;
+  if(!g||(g.records||[]).length===0){el.innerHTML='<div style="font-size:12px;color:var(--muted)">아직 기록 없음</div>';return;}
+  el.innerHTML=g.records.map(r=>{
+    const p=players.find(x=>x.id===r.playerId);if(!p)return'';
+    const goalStr=r.pkgoals?`일반 ${r.goals}G / PK ${r.pkgoals}G`:`G ${r.goals}`;
+    return`<div class="rec-item"><span class="avatar" style="width:22px;height:22px;font-size:9px">${p.name.slice(0,2)}</span><span style="flex:1;font-weight:500">${p.name}</span><span style="font-size:12px;color:var(--muted)">${goalStr}</span><span style="font-size:12px;color:var(--muted)">A ${r.assists}</span><span style="font-size:12px;color:var(--muted)">반칙 ${r.pim}</span><button class="btn btn-sm btn-danger" onclick="deleteRecord('${r.playerId}')">삭제</button></div>`;
+  }).join('');
+}
+
+function renderStats(){
+  let totalGoals=0;
+  games.forEach(g=>(g.records||[]).forEach(r=>totalGoals+=r.goals));
+  document.getElementById('st-p').textContent=players.length;
+  document.getElementById('st-g').textContent=games.length;
+  document.getElementById('st-t').textContent=teams.length;
+  document.getElementById('st-goals').textContent=totalGoals;
+
+  // Standings
+  const ts={};
+  teams.forEach(t=>{ts[t.id]={name:t.name,color:t.color,w:0,l:0,d:0,gf:0,ga:0};});
+  games.forEach(g=>{
+    if(!ts[g.teamAId]||!ts[g.teamBId])return;
+    ts[g.teamAId].gf+=g.scoreA;ts[g.teamAId].ga+=g.scoreB;
+    ts[g.teamBId].gf+=g.scoreB;ts[g.teamBId].ga+=g.scoreA;
+    if(g.scoreA>g.scoreB){ts[g.teamAId].w++;ts[g.teamBId].l++;}
+    else if(g.scoreA<g.scoreB){ts[g.teamBId].w++;ts[g.teamAId].l++;}
+    else{ts[g.teamAId].d++;ts[g.teamBId].d++;}
+  });
+  const standing=Object.values(ts).sort((a,b)=>{const pa=a.w*3+a.d,pb=b.w*3+b.d;if(pa!==pb)return pb-pa;return(b.gf-b.ga)-(a.gf-a.ga);});
+  const medals=['🥇','🥈','🥉'];
+  document.getElementById('sub-standings').innerHTML=!standing.length?'<div class="empty">팀 없음</div>':`<table class="stats-table" style="table-layout:fixed;width:100%"><colgroup><col style="width:30%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:10%"></colgroup><thead><tr><th style="white-space:nowrap">팀</th><th style="white-space:nowrap">경기</th><th style="white-space:nowrap">승</th><th style="white-space:nowrap">무</th><th style="white-space:nowrap">패</th><th style="white-space:nowrap">득점</th><th style="white-space:nowrap">실점</th><th style="text-align:right;white-space:nowrap">승점</th></tr></thead><tbody>${standing.map((t,i)=>`<tr><td><div style="display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden">${medals[i]||''}<span class="team-dot" style="background:${t.color};flex-shrink:0"></span><span style="font-weight:600;overflow:hidden;text-overflow:ellipsis">${t.name}</span></div></td><td style="white-space:nowrap">${t.w+t.l+t.d}</td><td style="color:var(--green);font-weight:600;white-space:nowrap">${t.w}</td><td style="white-space:nowrap">${t.d}</td><td style="color:var(--muted);white-space:nowrap">${t.l}</td><td style="white-space:nowrap">${t.gf}</td><td style="white-space:nowrap">${t.ga}</td><td style="text-align:right;font-weight:700;white-space:nowrap">${t.w*3+t.d}</td></tr>`).join('')}</tbody></table>`;
+
+  const allStats=players.map(p=>{const s=getPlayerStats(p.id);const t=getPlayerTeam(p.id);return{...p,...s,pts:s.total+s.a,teamName:t?.name||'',teamColor:t?.color||'#ccc'};});
+  const rankTbl=(arr,key,label)=>{
+    const sorted=[...arr].sort((a,b)=>b[key]-a[key]).filter(x=>x[key]>0);
+    if(!sorted.length)return'<div class="empty">기록 없음</div>';
+    return`<table class="stats-table" style="table-layout:fixed;width:100%"><colgroup><col style="width:8%"><col style="width:40%"><col style="width:40%"><col style="width:12%"></colgroup><thead><tr><th>#</th><th>선수</th><th>팀</th><th style="text-align:right;white-space:nowrap">${label}</th></tr></thead><tbody>${sorted.slice(0,15).map((p,i)=>`<tr><td style="font-weight:700;color:var(--muted);white-space:nowrap">${i+1}</td><td><div style="display:flex;align-items:center;gap:5px;overflow:hidden"><span class="avatar" style="flex-shrink:0">${p.name.slice(0,2)}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</span></div></td><td>${p.teamName?`<span style="display:inline-flex;align-items:center;gap:4px;overflow:hidden"><span class="team-dot" style="background:${p.teamColor};flex-shrink:0"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.teamName}</span></span>`:'<span style="color:var(--muted)">-</span>'}</td><td style="text-align:right;font-weight:700;white-space:nowrap">${p[key]}</td></tr>`).join('')}</tbody></table>`;
+  };
+  const pkgTbl=(arr)=>{
+    const sorted=[...arr].sort((a,b)=>b.total-a.total).filter(x=>x.total>0);
+    if(!sorted.length)return'<div class="empty">기록 없음</div>';
+    return`<table class="stats-table" style="table-layout:fixed;width:100%"><colgroup><col style="width:8%"><col style="width:32%"><col style="width:28%"><col style="width:11%"><col style="width:11%"><col style="width:10%"></colgroup><thead><tr><th>#</th><th>선수</th><th>팀</th><th style="text-align:right;white-space:nowrap">일반</th><th style="text-align:right;white-space:nowrap">PK</th><th style="text-align:right;white-space:nowrap">총</th></tr></thead><tbody>${sorted.slice(0,15).map((p,i)=>`<tr><td style="font-weight:700;color:var(--muted);white-space:nowrap">${i+1}</td><td><div style="display:flex;align-items:center;gap:5px;overflow:hidden"><span class="avatar" style="flex-shrink:0">${p.name.slice(0,2)}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.name}</span></div></td><td>${p.teamName?`<span style="display:inline-flex;align-items:center;gap:4px;overflow:hidden"><span class="team-dot" style="background:${p.teamColor};flex-shrink:0"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.teamName}</span></span>`:'<span style="color:var(--muted)">-</span>'}</td><td style="text-align:right;white-space:nowrap">${p.g}</td><td style="text-align:right;color:var(--accent);font-weight:600;white-space:nowrap">${p.pkg}</td><td style="text-align:right;font-weight:700;white-space:nowrap">${p.total}</td></tr>`).join('')}</tbody></table>`;
+  };
+  document.getElementById('sub-scorers').innerHTML=pkgTbl(allStats);
+  document.getElementById('sub-assists').innerHTML=rankTbl(allStats,'a','어시스트');
+  document.getElementById('sub-pim').innerHTML=rankTbl(allStats,'pim','반칙');
+  document.getElementById('sub-log').innerHTML=!games.length?'<div class="empty">경기 없음</div>':`<table><thead><tr><th>날짜</th><th colspan="3">경기</th><th>장소</th></tr></thead><tbody>${games.map(g=>`<tr><td style="color:var(--muted)">${g.date}</td><td><div style="display:flex;align-items:center;gap:5px"><span class="team-dot" style="background:${g.teamAColor}"></span><span style="font-weight:${g.scoreA>g.scoreB?'700':'400'}">${g.teamAName}</span></div></td><td style="font-weight:700;text-align:center">${g.scoreA}:${g.scoreB}</td><td><div style="display:flex;align-items:center;gap:5px"><span class="team-dot" style="background:${g.teamBColor}"></span><span style="font-weight:${g.scoreB>g.scoreA?'700':'400'}">${g.teamBName}</span></div></td><td style="color:var(--muted)">${g.venue}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function switchTab(name){
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>{t.classList.toggle('active',['players','teams','games','stats'][i]===name);});
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='stats'){
+    renderStats();
+    // re-apply active sub-tab visibility
+    const activeSub=document.querySelector('.sub-tab.on');
+    if(activeSub){
+      const label=activeSub.textContent.trim();
+      const map={'팀 순위':'standings','득점 순위':'scorers','어시스트':'assists','반칙':'pim','경기 기록':'log'};
+      const key=map[label]||'standings';
+      ['standings','scorers','assists','pim','log'].forEach(n=>{document.getElementById('sub-'+n).style.display=n===key?'':'none';});
+    }
+  }
+}
+
+function switchSub(name){
+  const labels={standings:'팀 순위',scorers:'득점 순위',assists:'어시스트',pim:'반칙',log:'경기 기록'};
+  document.querySelectorAll('.sub-tab').forEach(t=>{t.classList.toggle('on',t.textContent.trim()===labels[name]);});
+  ['standings','scorers','assists','pim','log'].forEach(n=>{document.getElementById('sub-'+n).style.display=n===name?'':'none';});
+}
+
+document.getElementById('g-date').valueAsDate=new Date();
+updateGates();
+</script>
+</body>
+</html>
